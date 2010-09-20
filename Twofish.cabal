@@ -1,5 +1,5 @@
 Name:          Twofish
-Version:       0.2
+Version:       0.3
 Category:      Cryptography, Codec
 Stability:     experimental
 Synopsis:      An implementation of the Twofish Symmetric-key cipher.
@@ -26,7 +26,7 @@ Description:   Implements the Twofish symmetric block cipher, designed by:
 Author:        Ron Leisti
 Maintainer:    ron.leisti@gmail.com
 Bug-Reports:   mailto:ron.leisti@gmail.com
-Homepage:
+Homepage:      http://github.com/rleisti/twofish  
 
 License:       BSD3
 License-File:  LICENSE
@@ -36,10 +36,15 @@ Build-Type:    Simple
 Library
   Build-Depends:   array >= 0.3
                    ,base >= 4 && < 5
-                   ,Crypto >= 4.2.1
+                   ,binary >= 0.5.0.2
+                   ,bytestring >= 0.9.1.7
+                   ,cereal >= 0.2
+                   ,crypto-api >= 0.0.0.2
                    ,HUnit >= 1.2.2.1
                    ,mtl >= 1.1.0.2
+                   ,tagged >= 0.1.1
   Exposed-Modules: Codec.Encryption.Twofish
+                   ,Data.Bitlib
                    ,Data.Cipher
   Extensions:      FlexibleContexts
                    ,FlexibleInstances 

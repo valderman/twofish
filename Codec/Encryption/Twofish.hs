@@ -31,11 +31,20 @@ module Codec.Encryption.Twofish
    ,q1o
    ) where
 
+import Crypto.Classes
 import Data.Array.Unboxed hiding (index)
+import Data.Binary
+import qualified Data.Binary.Get as BinaryGet
+import qualified Data.Binary.Put as BinaryPut
+import Data.Bitlib as Bitlib
 import Data.Bits
+import qualified Data.ByteString as ByteString
 import Data.Cipher
 import Data.LargeWord
-import Data.Word
+import Data.Serialize
+import qualified Data.Serialize.Get as SerializeGet
+import Data.Serialize.Put as SerializePut
+import Data.Tagged
 import Prelude hiding (length, drop, reverse, take)
 import qualified Prelude as P
 
@@ -57,7 +66,8 @@ instance Key Word192
 instance Key Word256
 
 -- |A keyed Twofish cipher capable of both encryption and decryption.
-data TwofishCipher = C { eb :: Block -> Block, db :: Block -> Block }
+data TwofishCipher = C { eb :: Block -> Block,
+                         db :: Block -> Block }
 
 -- |Twofish is a 128 bit block cipher.
 instance Cipher Word128 TwofishCipher where
@@ -69,6 +79,50 @@ instance Cipher Word128 TwofishCipher where
 liftCryptor :: (Block -> Block) -> Word128 -> Word128
 liftCryptor c = deBlock . c . mkBlock
 
+data TwofishKey = TwofishKey {  twofishKeyCipher  :: TwofishCipher
+                               ,twofishKeyContent :: Word256
+                             }
+
+instance (Binary TwofishKey) where
+    put = BinaryPut.putByteString . ByteString.pack . Bitlib.unpack . twofishKeyContent
+    get = do bytes <- BinaryGet.getBytes 32
+             let key = Bitlib.pack . ByteString.unpack $ bytes
+             let twofishKey = TwofishKey {  twofishKeyCipher  = mkStdCipher key
+                                           ,twofishKeyContent = key
+                                         } 
+             return twofishKey 
+
+instance (Serialize TwofishKey) where
+    put = SerializePut.putByteString . ByteString.pack . Bitlib.unpack . twofishKeyContent
+    get = do bytes <- SerializeGet.getBytes 32
+             let key = Bitlib.pack . ByteString.unpack $ bytes
+             let twofishKey = TwofishKey {  twofishKeyCipher  = mkStdCipher key
+                                           ,twofishKeyContent = key
+                                         } 
+             return twofishKey 
+
+instance (BlockCipher TwofishKey) where
+    blockSize        = Tagged 128
+    encryptBlock k s = let bytes       = ByteString.unpack s
+                           ws          = Bitlib.packMany (0 :: Word128) bytes
+                           blocks      = map mkBlock ws
+                           cryptBlocks = map (eb (twofishKeyCipher k)) blocks
+                           cryptWords  = map deBlock cryptBlocks
+                           cryptBytes  = unpackMany cryptWords
+                       in ByteString.pack cryptBytes
+    decryptBlock k s = let cryptBytes  = ByteString.unpack s
+                           cryptWords  = Bitlib.packMany (0 :: Word128) cryptBytes
+                           cryptBlocks = map mkBlock cryptWords
+                           blocks      = map (db (twofishKeyCipher k)) cryptBlocks
+                           ws          = map deBlock blocks
+                           bytes       = unpackMany ws
+                       in ByteString.pack bytes
+    keyLength _ = 256
+    buildKey s  = let word = Bitlib.pack (ByteString.unpack s) :: Word256
+                  in Just TwofishKey {  twofishKeyCipher  = mkStdCipher word
+                                       ,twofishKeyContent = word
+                                     }
+                           
 -- |A 128 bit data block, decomposed into four words
 type Block = (Word32, Word32, Word32, Word32)
 
