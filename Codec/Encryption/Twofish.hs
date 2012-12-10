@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances #-}
 
 -- Module      : Codec.Encryption.Twofish
--- Copyright   : (c) Ron Leisti 2010
+-- Copyright   : (c) Ron Leisti 2010-2012
 -- License     : BSD3
 -- Maintainer  : ron.leisti@gmail.com
 
@@ -26,7 +26,14 @@ module Codec.Encryption.Twofish
    -- * Functions
    ,mkStdCipher
    ,mkCipher
-   -- * Curiosities
+   ,encrypt
+   ,decrypt
+   -- * Utility functions
+   ,mkS
+   ,mkfH
+   ,mkK
+   ,mkG
+   ,encryptRounds
    ,q0o
    ,q1o
    ) where
@@ -39,7 +46,6 @@ import qualified Data.Binary.Put as BinaryPut
 import Data.Bitlib as Bitlib
 import Data.Bits
 import qualified Data.ByteString as ByteString
-import Data.Cipher
 import Data.LargeWord
 import Data.Serialize
 import qualified Data.Serialize.Get as SerializeGet
@@ -69,10 +75,11 @@ instance Key Word256
 data TwofishCipher = C { eb :: Block -> Block,
                          db :: Block -> Block }
 
--- |Twofish is a 128 bit block cipher.
-instance Cipher Word128 TwofishCipher where
-    encrypt c = liftCryptor (eb c)
-    decrypt c = liftCryptor (db c)
+encrypt :: TwofishCipher -> Word128 -> Word128
+encrypt = liftCryptor . eb
+
+decrypt :: TwofishCipher -> Word128 -> Word128
+decrypt = liftCryptor . db
 
 -- |Lift a crytographic transformation of a block into a
 -- transformation of a byte vector.
@@ -117,7 +124,7 @@ instance (BlockCipher TwofishKey) where
                            ws          = map deBlock blocks
                            bytes       = unpackMany ws
                        in ByteString.pack bytes
-    keyLength _ = 256
+    keyLength   = unTagged 256
     buildKey s  = let word = Bitlib.pack (ByteString.unpack s) :: Word256
                   in Just TwofishKey {  twofishKeyCipher  = mkStdCipher word
                                        ,twofishKeyContent = word
