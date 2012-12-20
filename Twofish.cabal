@@ -1,5 +1,5 @@
 Name:          Twofish
-Version:       0.3
+Version:       0.3.1
 Category:      Cryptography, Codec
 Synopsis:      An implementation of the Twofish Symmetric-key cipher.
 Description:   Implements the Twofish symmetric block cipher, designed by:
