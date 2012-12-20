@@ -12,7 +12,7 @@ pack []     = fromInteger 0
 pack (x:[]) = fromIntegral x
 pack (x:xs) = (fromIntegral x) .|. ((pack xs) `shiftL` (bitSize x))
 
-unpack :: (Integral a, Bits a, Bits b) => a -> [b]
+unpack :: (Integral a, Bits a, Num b, Bits b) => a -> [b]
 unpack = doUnpack 0
     where doUnpack :: (Integral a, Bits a, Bits b) => Int -> a -> [b]
           doUnpack n x
